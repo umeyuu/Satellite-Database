@@ -21,8 +21,6 @@ class Charge_Sat(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 
-    
-
 
 
 def main():
