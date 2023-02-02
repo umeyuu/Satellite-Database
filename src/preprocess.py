@@ -1,5 +1,12 @@
 import numpy as np
+import pandas as pd
 
+
+delta_min = 2640
+delta_sec = 43
+
+
+# バイナリーファイルを読み込む
 def read_binary_file(path : str) -> list:
     data = []
     with open(path, mode='rb') as f:
@@ -13,8 +20,7 @@ def read_binary_file(path : str) -> list:
 
 from datetime import datetime, timedelta
 
-delta_min = 2640
-delta_sec = 43
+
 
 # lat, geo_lat, mag_lat全ての緯度に使える
 def get_latitude(lat : float) -> float:
@@ -36,6 +42,7 @@ def rearrange_channel(input : list) -> list:
         tmp = list(reversed(tmp))
         output.extend(tmp)
     return output
+
 
 # エネルギー流量に変換
 def decompress_flux(energy_lis : list, gfactor : list, channel_lis : list) -> list:
@@ -85,5 +92,5 @@ def convert_DataFrame(YMD : datetime, data : list):
             tmp.extend(ions)
             output.append(tmp)
     
-    return output
+    return pd.DataFrame(output)
             
