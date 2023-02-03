@@ -1,11 +1,18 @@
 import numpy as np
 
-class Geometric_Factors:
+class Sat_Config:
     """""
     https://www.ncei.noaa.gov/data/dmsp-space-weather-sensors/doc/AFRL%20ASCII%20and%20Binary%20File%20Format%20Descriptions.pdf
     このpdfを参照
     """""
     def __init__(self) -> None:
+        
+        self.electron_channel = [ 30000, 20400, 13900, 9450, 6460, 4400, 3000,\
+                                 2040, 1392, 949, 646, 440, 300, 204, 139, 95, 65, 44, 30]
+
+        self.ion_channel = [ 9600, 8050, 5475, 3720, 2525, 1730, 1180, 804, 545.5,\
+                             373, 373, 254.5, 173, 118, 80.5, 54.5, 37, 25.5, 17.5, 14]
+        
         """""
         エレクトロンのGeometric Factors
         """""
@@ -181,8 +188,13 @@ class Geometric_Factors:
     
     def get(self, index : int, spicies : str) -> list:
 
+        if index <= 15: # j4
+            dt = 0.098
+        else: # j5
+            dt = 0.05
+
         if spicies == 'ion':
-            return self.ion_gfactor[index]
+            return self.ion_gfactor[index], self.ion_channel, dt
         elif spicies == 'electron':
-            return self.electron_gfactor_dict[index]
-        
+            return self.electron_gfactor_dict[index], self.electron_channel, dt
+

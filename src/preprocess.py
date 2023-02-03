@@ -1,96 +1,112 @@
 import numpy as np
 import pandas as pd
-
-
-delta_min = 2640
-delta_sec = 43
-
-
-# バイナリーファイルを読み込む
-def read_binary_file(path : str) -> list:
-    data = []
-    with open(path, mode='rb') as f:
-        while True:
-            bytes=f.read(2)
-            if bytes:
-                data.append(int.from_bytes(bytes,byteorder='big'))
-            else:
-                break
-    return data
-
 from datetime import datetime, timedelta
+from src.parameter import Sat_Config
 
 
+class Process_Binary_File(Sat_Config):
+    def __init__(self) -> None:
+        self.DELTA_MIN = 2640
+        self.DELTA_SEC = 43
 
-# lat, geo_lat, mag_lat全ての緯度に使える
-def get_latitude(lat : float) -> float:
-    if lat < 1800:
-        return float(lat-900)/10.0
-    else:
-        return float(lat-4995)/10.0 
-
-# lon, geo_lon, mag_lon全ての経度に使える
-def get_longitude(lon : float) -> float:
-    return float(lon)/10.0
+        self.Sat_Conf = Sat_Config()
 
 
-# チャンネルを昇順に並び替える
-def rearrange_channel(input : list) -> list:
-    output = []
-    for i in range(0, 20, 4):
-        tmp = input[i:i+4]
-        tmp = list(reversed(tmp))
-        output.extend(tmp)
-    return output
+    # バイナリーファイルを読み込む
+    def read_binary_file(self, path : str) -> list:
+        self.data = []
+        with open(path, mode='rb') as f:
+            while True:
+                bytes=f.read(2)
+                if bytes:
+                    self.data.append(int.from_bytes(bytes,byteorder='big'))
+                else:
+                    break
 
-
-# エネルギー流量に変換
-def decompress_flux(energy_lis : list, gfactor : list, channel_lis : list) -> list:
-    
-    dt = 0.05
-    output = []
-    for ele, g, ch in zip(energy_lis, gfactor, channel_lis):
-        X = ele % 32
-        Y = (ele - X) / 32
-        if (X + 32) * 2**Y -33 > 0:
-            converted_value = (X + 32) * 2**Y / dt / g * ch
+    # lat, geo_lat, mag_lat全ての緯度に使える
+    def get_latitude(self, lat : float) -> float:
+        if lat < 1800:
+            return float(lat-900)/10.0
         else:
-            converted_value = np.nan
-        output.append(converted_value)
-    return output
-    
+            return float(lat-4995)/10.0 
+
+    # lon, geo_lon, mag_lon全ての経度に使える
+    def get_longitude(self, lon : float) -> float:
+        return float(lon)/10.0
 
 
-def convert_DataFrame(YMD : datetime, data : list):
-    """
-    YMD : datetime(year, month, day)
-    """
-    output = []
-    for i in range(0, len(data), delta_min):
+    # チャンネルを昇順に並び替える
+    def rearrange_channel(self, input : list) -> list:
+        output = []
+        for i in range(0, 20, 4):
+            tmp = input[i:i+4]
+            tmp = list(reversed(tmp))
+            output.extend(tmp)
+        return output
 
-        DoY = data[0]
 
-        lat = get_latitude(data[i+5])
-        lon = get_longitude(data[i+6])
-
+    # エネルギー流量に変換
+    def calculate_flux(self, energy_lis : list, index : int, spicies : str) -> list:
         
-        for j in range(60):
-            tmp = []
-            base = 15 + i + delta_sec*j
+        gfactor, channel_lis, delta_t = self.Sat_Conf.get(index, spicies)
+        output = []
+        for ele, g, ch in zip(energy_lis, gfactor, channel_lis):
+            X = ele % 32
+            Y = (ele - X) / 32
+            if (X + 32) * 2**Y -33 > 0:
+                converted_value = (X + 32) * 2**Y / delta_t / g * ch
+            else:
+                converted_value = np.nan
+            output.append(converted_value)
+        return output
+        
 
-            hour = data[base]
-            minute = data[base+1]
-            second = int(float(data[base + 2])/1000)
 
-            date = YMD + timedelta(days=DoY-1, hours=hour, minutes=minute, seconds=second)
+    def convert_DataFrame(self, YMD : datetime, index : int):
+        """
+        YMD : datetime(year, month, day)
+        """
 
-            electrons = rearrange_channel(data[base+3 : base+23])
-            ions = rearrange_channel(data[base+23 : base+43])
+        output = []
+        for i in range(0, len(self.data), self.DELTA_MIN):
 
-            tmp.append(date)
-            tmp.extend(electrons)
-            tmp.extend(ions)
-            output.append(tmp)
-    
-    return pd.DataFrame(output)
+            DoY = self.data[0]
+
+            lat = self.get_latitude(self.data[i+5])
+            lon = self.get_longitude(self.data[i+6])
+
             
+            for j in range(60):
+                tmp = []
+                base = 15 + i + self.DELTA_SEC * j
+
+                hour = self.data[base]
+                minute = self.data[base+1]
+                second = int(float(self.data[base + 2])/1000)
+
+                date = YMD + timedelta(days=DoY-1, hours=hour, minutes=minute, seconds=second)
+
+                electrons = self.rearrange_channel(self.data[base+3 : base+23])
+                ions = self.rearrange_channel(self.data[base+23 : base+43])
+
+                # 流量
+                ele_flux = self.calculate_flux(energy_lis=electrons, index=index, spicies='electron')
+                ion_flux = self.calculate_flux(energy_lis=ions, index=index, spicies='ion')
+
+
+                tmp.append(date)
+                tmp.extend(ele_flux)
+                tmp.extend(ion_flux)
+                output.append(tmp)
+        
+        return pd.DataFrame(output)
+    
+    def execute(self, YMD : datetime, index : int):
+        year = YMD.year
+        month = str(YMD.month).zfill(2)
+        day = str(YMD.day).zfill(2)
+        
+        path = f'/Volumes/USB/Raw_Data/dmsp-f{index}/{year}/{month}/dmsp-f{index}_{year}{month}{day}'
+        self.read_binary_file(path=path)
+        df = self.convert_DataFrame(YMD=YMD, index=index)
+        return df
