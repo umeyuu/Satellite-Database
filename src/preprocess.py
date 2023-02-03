@@ -84,7 +84,7 @@ class Process_Binary_File(Sat_Config):
                 minute = self.data[base+1]
                 second = int(float(self.data[base + 2])/1000)
 
-                date = YMD + timedelta(days=DoY-1, hours=hour, minutes=minute, seconds=second)
+                date = YMD + timedelta( hours=hour, minutes=minute, seconds=second)
 
                 electrons = self.rearrange_channel(self.data[base+3 : base+23])
                 ions = self.rearrange_channel(self.data[base+23 : base+43])
@@ -102,6 +102,9 @@ class Process_Binary_File(Sat_Config):
         return pd.DataFrame(output)
     
     def execute(self, YMD : datetime, index : int):
+        """""
+        YMD : 検索する日にち、　index : 衛星番号
+        """""
         year = YMD.year
         month = str(YMD.month).zfill(2)
         day = str(YMD.day).zfill(2)
