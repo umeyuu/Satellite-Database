@@ -198,3 +198,4 @@ class Sat_Config:
         elif spicies == 'electron':
             return self.electron_gfactor_dict[index], self.electron_channel, dt
 
+

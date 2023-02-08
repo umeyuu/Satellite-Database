@@ -99,7 +99,20 @@ class Process_Binary_File(Sat_Config):
                 tmp.extend(ion_flux)
                 output.append(tmp)
         
-        return pd.DataFrame(output)
+        columns = ['date']
+        electron_channel = self.Sat_Conf.electron_channel
+        ion_channel = self.Sat_Conf.ion_channel
+        chanels = electron_channel + ion_channel
+
+        for i, ch in enumerate(chanels):
+            if i <= len(electron_channel):
+                spicies = 'electron'
+            else:
+                spicies = 'ion'
+            columns.append(f'{spicies}_{ch}eV')
+        
+
+        return pd.DataFrame(output, columns=columns)
     
     def execute(self, YMD : datetime, index : int):
         """""
@@ -113,3 +126,4 @@ class Process_Binary_File(Sat_Config):
         self.read_binary_file(path=path)
         df = self.convert_DataFrame(YMD=YMD, index=index)
         return df
+
