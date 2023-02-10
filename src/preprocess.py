@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-from src.parameter import Sat_Config
+from parameter import Sat_Config
 
 
 class Process_Binary_File(Sat_Config):
@@ -50,16 +50,30 @@ class Process_Binary_File(Sat_Config):
         
         gfactor, channel_lis, delta_t = self.Sat_Conf.get(index, spicies)
         output = []
-        for ele, g, ch in zip(energy_lis, gfactor, channel_lis):
-            X = ele % 32
-            Y = (ele - X) / 32
-            if (X + 32) * 2**Y -33 > 0:
-                converted_value = (X + 32) * 2**Y / delta_t / g * ch
+        for energy, g, ch in zip(energy_lis, gfactor, channel_lis):
+            X = energy % 32
+            Y = (energy - X) / 32
+            count = (X + 32) * 2**Y -33
+            if  count > 0:
+                converted_value = count / delta_t / g * ch
             else:
                 converted_value = np.nan
             output.append(converted_value)
         return output
-        
+    
+    # 3種類の緯度経度を取得
+    def get_lat_lon(self, index : int):
+        lat = self.get_latitude(self.data[index + 5]) # 測地学的緯度
+        lon = self.get_longitude(self.data[index + 6]) # 測地学的経度
+
+        geo_lat = self.get_latitude(self.data[index + 8]) # 地理座標系の緯度
+        geo_lon = self.get_longitude(self.data[index + 9]) # 地理座標系の経度
+
+        mag_lat = self.get_latitude(self.data[index + 10]) # 地磁気緯度
+        mag_lon = self.get_longitude(self.data[index + 11]) # 地磁気経度
+        mag_ltime = self.data[index + 12] #地磁気現地時間
+
+        return np.array([lat, lon, geo_lat, geo_lon, mag_lat, mag_lon, mag_ltime])
 
 
     def convert_DataFrame(self, YMD : datetime, index : int):
@@ -68,24 +82,32 @@ class Process_Binary_File(Sat_Config):
         """
 
         output = []
-        for i in range(0, len(self.data), self.DELTA_MIN):
-
-            DoY = self.data[0]
-
-            lat = self.get_latitude(self.data[i+5])
-            lon = self.get_longitude(self.data[i+6])
-
+        length = len(self.data)
+        for i in range(0, length, self.DELTA_MIN):
+            # 現在の緯度経度
+            latlon_array = self.get_lat_lon(index=i)
             
+            if i != length - self.DELTA_MIN:
+                # 1分後の緯度経度
+                next_latlon_array = self.get_lat_lon(index=i+self.DELTA_MIN)
+                # 1秒間の緯度経度の変化量
+                delta_latlon_array = (next_latlon_array - latlon_array) / 60
+            
+
             for j in range(60):
                 tmp = []
                 base = 15 + i + self.DELTA_SEC * j
 
+                # 時間
                 hour = self.data[base]
                 minute = self.data[base+1]
                 second = int(float(self.data[base + 2])/1000)
-
                 date = YMD + timedelta( hours=hour, minutes=minute, seconds=second)
 
+                # 緯度、経度
+                current_latlon = list(latlon_array + delta_latlon_array * j)
+
+                # センサ値
                 electrons = self.rearrange_channel(self.data[base+3 : base+23])
                 ions = self.rearrange_channel(self.data[base+23 : base+43])
 
@@ -95,17 +117,19 @@ class Process_Binary_File(Sat_Config):
 
 
                 tmp.append(date)
+                tmp.extend(current_latlon)
                 tmp.extend(ele_flux)
                 tmp.extend(ion_flux)
                 output.append(tmp)
         
-        columns = ['date']
+        # 列名を定義
+        columns = ['date', 'lat', 'lon', 'geo_lat', 'geo_lon', 'mag_lat', 'mag_lon', 'mag_ltime']
         electron_channel = self.Sat_Conf.electron_channel
         ion_channel = self.Sat_Conf.ion_channel
         chanels = electron_channel + ion_channel
 
         for i, ch in enumerate(chanels):
-            if i <= len(electron_channel):
+            if i < len(electron_channel):
                 spicies = 'electron'
             else:
                 spicies = 'ion'
@@ -116,7 +140,7 @@ class Process_Binary_File(Sat_Config):
     
     def execute(self, YMD : datetime, index : int):
         """""
-        YMD : 検索する日にち、　index : 衛星番号
+        YMD : 検索する日にち、 index : 衛星番号
         """""
         year = YMD.year
         month = str(YMD.month).zfill(2)
