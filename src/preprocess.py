@@ -48,9 +48,10 @@ class Process_Binary_File(Sat_Config):
 
 
     # エネルギー流量に変換
-    def calculate_flux(self, energy_lis : list, index : int, spicies : str) -> list:
+    def calculate_flux(self, energy_lis : list, index : int) -> list:
         
-        gfactor, channel_lis, delta_t = self.Sat_Conf.get(index, spicies)
+        gfactor, channel_lis, delta_t = self.Sat_Conf.get(index)
+
         output = []
         for energy, g, ch in zip(energy_lis, gfactor, channel_lis):
             X = energy % 32
@@ -114,8 +115,8 @@ class Process_Binary_File(Sat_Config):
                 ions = self.rearrange_channel(self.data[base+23 : base+43])
 
                 # 流量
-                ele_flux = self.calculate_flux(energy_lis=electrons, index=index, spicies='electron')
-                ion_flux = self.calculate_flux(energy_lis=ions, index=index, spicies='ion')
+                ele_flux = self.calculate_flux(energy_lis=electrons, index=index)
+                ion_flux = self.calculate_flux(energy_lis=ions, index=index)
 
 
                 tmp.append(date)
@@ -126,12 +127,11 @@ class Process_Binary_File(Sat_Config):
         
         # 列名を定義
         columns = ['date', 'lat', 'lon', 'geo_lat', 'geo_lon', 'mag_lat', 'mag_lon', 'mag_ltime']
-        electron_channel = self.Sat_Conf.electron_channel
-        ion_channel = self.Sat_Conf.ion_channel
-        chanels = electron_channel + ion_channel
+        chanel = self.Sat_Conf.channel
+        chanels = chanel + chanel
 
         for i, ch in enumerate(chanels):
-            if i < len(electron_channel):
+            if i < len(chanel):
                 spicies = 'electron'
             else:
                 spicies = 'ion'
@@ -153,6 +153,3 @@ class Process_Binary_File(Sat_Config):
         df = self.convert_DataFrame(YMD=YMD, index=index)
         return df
 
-# pbf = Process_Binary_File()
-# YMD = datetime(2011, 5, 2)
-# df = pbf.execute(YMD=YMD, index=16)

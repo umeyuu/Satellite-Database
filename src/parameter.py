@@ -7,12 +7,9 @@ class Sat_Config:
     """""
     def __init__(self) -> None:
         
-        self.electron_channel = [ 30000, 20400, 13900, 9450, 6460, 4400, 3000,\
-                                 2040, 1392, 949, 646, 440, 300, 204, 139, 95, 65, 44, 30]
+        self.channel = [ 30000, 20400, 13900, 9450, 6460, 4400, 3000,\
+                        2040, 1392, 949, 646, 440, 300, 204, 139, 95, 65, 44, 30]
 
-        self.ion_channel = [ 9600, 8050, 5475, 3720, 2525, 1730, 1180, 804, 545.5,\
-                             373, 254.5, 173, 118, 80.5, 54.5, 37, 25.5, 17.5, 14]
-        
         """""
         エレクトロンのGeometric Factors
         """""
@@ -186,16 +183,13 @@ class Sat_Config:
             18 : f18_ion
         }
     
-    def get(self, index : int, spicies : str) -> list:
+    def get(self, index : int) -> list:
 
         if index <= 15: # j4
             dt = 0.098
         else: # j5
             dt = 0.05
 
-        if spicies == 'ion':
-            return self.ion_gfactor[index], self.ion_channel, dt
-        elif spicies == 'electron':
-            return self.electron_gfactor_dict[index], self.electron_channel, dt
+        return self.ion_gfactor[index], self.channel, dt
 
 

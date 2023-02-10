@@ -11,10 +11,12 @@ import os
 
 class SAT_DATA():
 
-    def open(self, path):
-        _, extension = os.path.splitext(path)
+    def __init__(self) -> None:
         self.channel = np.array([ 30000, 20400, 13900, 9450, 6460, 4400, 3000,\
                                  2040, 1392, 949, 646, 440, 300, 204, 139, 95, 65, 44, 30], dtype=float)
+        
+    def open(self, path):
+        _, extension = os.path.splitext(path)
         if extension == '.cdf':
             self.open_cdf(path=path)
         elif extension == '.csv':
