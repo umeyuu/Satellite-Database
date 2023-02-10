@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-from src.parameter import Sat_Config
+from parameter import Sat_Config
+import os
 
 
 class Process_Binary_File(Sat_Config):
@@ -150,7 +151,35 @@ class Process_Binary_File(Sat_Config):
         day = str(YMD.day).zfill(2)
         
         path = f'/Volumes/USB/Raw_Data/dmsp-f{index}/{year}/{month}/dmsp-f{index}_{year}{month}{day}'
+
         self.read_binary_file(path=path)
         df = self.convert_DataFrame(YMD=YMD, index=index)
         return df
 
+def main(index : int, start_year : int, end_year : int):
+    pbf = Process_Binary_File()
+    for year in range(start_year, end_year+1):
+        for month in range(1, 13):
+            for day in range(1, 32):
+                print(year, month, day)
+                try:
+                    YMD = datetime(year=year, month=month, day=day)
+                    df = pbf.execute(YMD=YMD, index=index)
+                except:
+                    continue
+
+                month_str = str(month).zfill(2)
+                day_str = str(day).zfill(2)
+                save_dir = f'/Volumes/USB/Processed_Data/dmsp-f{index}/{year}/{month_str}/'
+                save_file = f'dmsp-f{index}_{year}{month_str}{day_str}.csv'
+
+                 # ディレクトリー作成
+                if not os.path.isdir(save_dir):
+                    os.makedirs(save_dir)
+                df.to_csv(save_dir + save_file, index=False)
+
+if __name__ == '__main__':
+    index = 16
+    start_year = 2004
+    end_year = 2022
+    main(index=index, start_year=start_year, end_year=end_year)
