@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-from parameter import Sat_Config
+from src.parameter import Sat_Config
 
 
 class Process_Binary_File(Sat_Config):
@@ -41,6 +41,8 @@ class Process_Binary_File(Sat_Config):
         for i in range(0, 20, 4):
             tmp = input[i:i+4]
             tmp = list(reversed(tmp))
+            if i == 8:
+                del tmp[2]
             output.extend(tmp)
         return output
 
@@ -57,7 +59,7 @@ class Process_Binary_File(Sat_Config):
             if  count > 0:
                 converted_value = count / delta_t / g * ch
             else:
-                converted_value = np.nan
+                converted_value = 0.0
             output.append(converted_value)
         return output
     
@@ -151,3 +153,6 @@ class Process_Binary_File(Sat_Config):
         df = self.convert_DataFrame(YMD=YMD, index=index)
         return df
 
+# pbf = Process_Binary_File()
+# YMD = datetime(2011, 5, 2)
+# df = pbf.execute(YMD=YMD, index=16)
