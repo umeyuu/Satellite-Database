@@ -10,6 +10,7 @@ class Process_Binary_File(Sat_Config):
         self.DELTA_SEC = 43
 
         self.Sat_Conf = Sat_Config()
+        self.channel_lis = self.Sat_Conf.channel
 
 
     # バイナリーファイルを読み込む
@@ -48,12 +49,12 @@ class Process_Binary_File(Sat_Config):
 
 
     # エネルギー流量に変換
-    def calculate_flux(self, energy_lis : list, index : int) -> list:
+    def calculate_flux(self, energy_lis : list, index : int, spicies : str) -> list:
         
-        gfactor, channel_lis, delta_t = self.Sat_Conf.get(index)
+        gfactor, delta_t = self.Sat_Conf.get(index=index, spicies=spicies)
 
         output = []
-        for energy, g, ch in zip(energy_lis, gfactor, channel_lis):
+        for energy, g, ch in zip(energy_lis, gfactor, self.channel_lis):
             X = energy % 32
             Y = (energy - X) / 32
             count = (X + 32) * 2**Y -33
@@ -115,8 +116,8 @@ class Process_Binary_File(Sat_Config):
                 ions = self.rearrange_channel(self.data[base+23 : base+43])
 
                 # 流量
-                ele_flux = self.calculate_flux(energy_lis=electrons, index=index)
-                ion_flux = self.calculate_flux(energy_lis=ions, index=index)
+                ele_flux = self.calculate_flux(energy_lis=electrons, index=index, spicies='electron')
+                ion_flux = self.calculate_flux(energy_lis=ions, index=index, spicies='ion')
 
 
                 tmp.append(date)
@@ -127,11 +128,11 @@ class Process_Binary_File(Sat_Config):
         
         # 列名を定義
         columns = ['date', 'lat', 'lon', 'geo_lat', 'geo_lon', 'mag_lat', 'mag_lon', 'mag_ltime']
-        chanel = self.Sat_Conf.channel
-        chanels = chanel + chanel
+
+        chanels = self.channel_lis + self.channel_lis
 
         for i, ch in enumerate(chanels):
-            if i < len(chanel):
+            if i < len(self.channel_lis):
                 spicies = 'electron'
             else:
                 spicies = 'ion'

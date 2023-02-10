@@ -183,13 +183,16 @@ class Sat_Config:
             18 : f18_ion
         }
     
-    def get(self, index : int) -> list:
+    def get(self, index : int, spicies : str) -> list:
 
         if index <= 15: # j4
             dt = 0.098
         else: # j5
             dt = 0.05
 
-        return self.ion_gfactor[index], self.channel, dt
+        if spicies == 'ion':
+            return self.ion_gfactor[index], dt
+        elif spicies == 'electron':
+            return self.electron_gfactor_dict[index], dt
 
 
