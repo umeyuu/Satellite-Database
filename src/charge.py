@@ -40,15 +40,15 @@ class SAT_Charge():
     # csvを開く
     def open_csv(self, path : str):
         
-        df = pd.read_csv(path, parse_dates=['date'])
+        self.df = pd.read_csv(path, parse_dates=['date'])
         # イオン, エレクトロン
-        self.ion = df.values[:, 27:].astype(float)
-        self.electron = df.values[:, 8:27].astype(float)
+        self.ion = self.df.values[:, 27:46].astype(float)
+        self.electron = self.df.values[:, 8:27].astype(float)
         # 日にち
-        self.date = df.values[:, 0]
+        self.date = self.df.values[:, 0]
         # 緯度経度（地磁気座標系）
-        self.lat = abs(df.mag_lat.values.astype(float))
-        self.lon = df.mag_ltime.values.astype(float) * np.pi / 12
+        self.lat = abs(self.df.mag_lat.values.astype(float))
+        self.lon = self.df.mag_ltime.values.astype(float) * np.pi / 12
 
         
     # 表面帯電の概要をヒートマップで図示
@@ -147,4 +147,46 @@ class SAT_Charge():
         ax = plt.subplot(111, projection="polar")
         ax.scatter(Lo, La)
         ax.set_ylim([90,40]);
+    
+    # 帯電チャンネルを追加. -1は帯電していない。
+    def add_charge_col(self, save_path : str) -> None:
+        try:
+            length = len(self.df)
+        except:
+            pass
+
+        charge_index_channel = self.detect_charge()
+        channel = [-1] * length
+        for i, ch in charge_index_channel:
+            channel[i] = ch
+        self.df['charge_channel'] = channel
+        # 保存
+        self.df.to_csv(save_path, index=False)
+
+
+def main(index : int, start_year : int, end_year : int):
+    sat = SAT_Charge()
+    for year in range(start_year, end_year+1):
+        for month in range(1, 13):
+            for day in range(1, 32):
+                print(year, month, day)
+
+                month_str = str(month).zfill(2)
+                day_str = str(day).zfill(2)
+                save_dir = f'/Volumes/USB/Processed_Data/dmsp-f{index}/{year}/{month_str}/'
+                save_file = f'dmsp-f{index}_{year}{month_str}{day_str}.csv'
+
+                try :
+                    sat.open(save_dir+save_file)
+                    # 帯電情報を追加
+                    sat.add_charge_col(save_path=save_dir+save_file)
+                except:
+                    continue
+
+if __name__ == '__main__':
+    index = 16
+    start_year = 2004
+    end_year = 2022
+    main(index=index, start_year=start_year, end_year=end_year)
+
 
