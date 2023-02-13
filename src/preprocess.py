@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-from parameter import Sat_Config
+from .parameter import Sat_Config
 import os
 
 
@@ -179,7 +179,7 @@ def main(index : int, start_year : int, end_year : int):
                 df.to_csv(save_dir + save_file, index=False)
 
 if __name__ == '__main__':
-    index = 16
-    start_year = 2004
-    end_year = 2022
+    index = 14
+    start_year = 1998
+    end_year = 2004
     main(index=index, start_year=start_year, end_year=end_year)

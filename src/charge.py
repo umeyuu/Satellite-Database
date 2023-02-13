@@ -9,11 +9,13 @@ import scipy.stats as stats
 import os
 
 
-class SAT_DATA():
+class SAT_Charge():
 
     def __init__(self) -> None:
         self.channel = np.array([ 30000, 20400, 13900, 9450, 6460, 4400, 3000,\
                                  2040, 1392, 949, 646, 440, 300, 204, 139, 95, 65, 44, 30], dtype=float)
+        
+        self.charge_range = list(range(7, 16))
         
     def open(self, path):
         _, extension = os.path.splitext(path)
@@ -96,6 +98,7 @@ class SAT_DATA():
             if tau_far < tau: 
                 break
             o.append(x.pop(i_far))
+        o.sort(reverse=True)
         return np.array(o)
 
     # 帯電している時間を検知
@@ -103,6 +106,7 @@ class SAT_DATA():
         check_id_list = []
         alpha = 0.01
         charge_id = []
+        # 14keV以上のelectronの流量が10^8以上
         for i, ele in enumerate(self.electron):
             if any(ele[:3] > 1e8):
                 check_id_list.append(i)
@@ -111,10 +115,20 @@ class SAT_DATA():
             check_ion = self.ion[i][self.ion[i] > 0]
             if len(check_ion) <= 2:
                 continue
+            
+            # 異常値検出
             out_array = self.smirnov_grubbs(check_ion, alpha)
-            if len(out_array) > 0 and any(out_array > 1e7):
-                ch = np.where(self.ion[i] == out_array.max())[0]
-                charge_id.append((i, ch[0]))
+
+            if len(out_array) == 0:
+                continue
+
+            for out_value in out_array:
+                ch = np.where(self.ion[i] == out_value)[0].item()
+                # 異常値は1e7以上で、95eV以上2040eV以下
+                if ch in self.charge_range and out_value > 1e7:
+                    charge_id.append((i, ch))
+                    continue
+
         return charge_id
 
     # 帯電している位置を取得（地磁気座標系）
@@ -133,3 +147,4 @@ class SAT_DATA():
         ax = plt.subplot(111, projection="polar")
         ax.scatter(Lo, La)
         ax.set_ylim([90,40]);
+
