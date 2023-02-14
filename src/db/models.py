@@ -17,8 +17,10 @@ class Charge_Sat(Base):
     date = Column(DateTime)
     lat = Column(Float)
     lon = Column(Float)
+    charge_count = Column(Integer)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    satellite_id = Column()
 
 
 

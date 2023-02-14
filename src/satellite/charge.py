@@ -184,8 +184,8 @@ def main(index : int, start_year : int, end_year : int):
                     continue
 
 if __name__ == '__main__':
-    index = 16
-    start_year = 2004
+    index = 17
+    start_year = 2007
     end_year = 2022
     main(index=index, start_year=start_year, end_year=end_year)
 

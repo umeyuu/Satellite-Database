@@ -73,4 +73,4 @@ def scrape_dmsp(name : str, st_year : int, et_year : int):
 
 if __name__ == '__main__':
     # save_satelite_cdf_data('f16')
-    scrape_dmsp('f16', 2011, 2015)
+    scrape_dmsp('f18', 2010, 2015)
