@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from models import Charge_Sat
+from sqlalchemy import func
+from typing import Tuple
 
 
 
@@ -29,6 +31,7 @@ def InsertChargeData(path : str, sta_index : int) -> None:
     columns = ['satellite_id', 'date', 'lat', 'lon', 'charge_count']
     output_df = pd.DataFrame(np.array([sat_id, date, mag_lat_array, mag_ltime_array, charge_count_array]).T, columns=columns)
     output_df["created_at"] = datetime.now()
+    breakpoint()
     # データベースへ書き込み
     output_df.to_sql("charge",con=ENGINE, if_exists="append", method="multi", index=False)
 
@@ -38,7 +41,6 @@ def InsertAll(sat_index : int, start_year : int, end_year : int) -> None:
     for year in range(start_year, end_year+1):
         for month in range(1, 13):
             for day in range(1, 32):
-                print(year, month, day)
 
                 month_str = str(month).zfill(2)
                 day_str = str(day).zfill(2)
@@ -47,6 +49,7 @@ def InsertAll(sat_index : int, start_year : int, end_year : int) -> None:
                 # データベースに挿入
                 try :
                     InsertChargeData(path=path, sta_index=sat_index)
+                    print(year, month, day)
                 except:
                     continue
             
@@ -60,12 +63,54 @@ def ReadChargeDate():
     df = pd.DataFrame(tmp, columns=['date', 'lat', 'lon', 'charge_count'])
     df.to_csv('../../charge.csv', index=False)
 
+# 時刻に対応するidを取得
+def get_date_id(satellite_id, YMD : datetime) -> int:
+    response = session.query(Charge_Sat.id).filter(
+        Charge_Sat.satellite_id == satellite_id,
+        Charge_Sat.date == YMD
+        ).first()
+    return response[0]
+
+
+# 1分後に帯電しているレコードを取得
+def get_charge_next(satellite_id : int, start_date: datetime = None, start_id: int = None) -> Tuple[list, int]:
+    # 取得期間
+    if start_id == None:
+        start_id = get_date_id(satellite_id=satellite_id, YMD=start_date)
+        end_id = start_id + 100000 # 1度に100,000レコードしか取得できないため
+    elif start_date == None:
+        end_id = start_id + 100000 # 1度に100,000レコードしか取得できないため
+    
+    # サブクエリー
+    subquery = (session.query(
+        Charge_Sat.date,
+        Charge_Sat.lat,
+        Charge_Sat.lon,
+        Charge_Sat.charge_count,
+        func.lead(Charge_Sat.charge_count, 1).over(order_by=Charge_Sat.date).label('next_count')
+    ).filter(
+        Charge_Sat.satellite_id == satellite_id,
+        Charge_Sat.id.between(start_id, end_id)
+        )).subquery('sub')
+    
+    # メインクエリー
+    response = session.query(subquery).filter(subquery.c.next_count > 0).all()
+
+    output = []
+    for date, lat, lon, charge_count, next_count in response:
+        output.append([date, lat, lon, charge_count, next_count])
+    
+    return output, end_id
+
         
 
 
 if __name__ == '__main__':
-    # sat_index = 16
-    # start_year = 2004
+    # sat_index = 18
+    # start_year = 2010
     # end_year = 2022
     # InsertAll(sat_index=sat_index, start_year=start_year, end_year=end_year)
-    ReadChargeDate()
+    # ReadChargeDate()
+    s = datetime(year=2004, month=1, day=1)
+    tmp, ind = get_charge_next(satellite_id=16, start_date=s)
+    breakpoint()
