@@ -1,8 +1,10 @@
+import os
+from datetime import datetime, timedelta
+
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
+
 from .parameter import Sat_Config
-import os
 
 
 class Process_Binary_File(Sat_Config):
@@ -76,7 +78,12 @@ class Process_Binary_File(Sat_Config):
 
         mag_lat = self.get_latitude(self.data[index + 10]) # 地磁気緯度
         mag_lon = self.get_longitude(self.data[index + 11]) # 地磁気経度
-        mag_ltime = self.data[index + 12] #地磁気現地時間
+
+        # 地磁気現地時間
+        mag_ltime_hour = self.data[index + 12]
+        mag_ltime_minute = self.data[index + 13]
+        mag_ltime_second = self.data[index + 14]
+        mag_ltime = mag_ltime_hour + mag_ltime_minute / 60 + mag_ltime_second / 3600
 
         return np.array([lat, lon, geo_lat, geo_lon, mag_lat, mag_lon, mag_ltime])
 
