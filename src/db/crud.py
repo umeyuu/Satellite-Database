@@ -158,10 +158,12 @@ def GetChargeDataAll():
     df = pd.DataFrame(output, columns=columns)
     df.to_csv('charge.csv', index=False)
 
-    
+
+# 任意の日付のcharge_countを更新
 def UpdateChargeCountByDate(path : str, start_id : int) -> int:
     # csvを読み込み
     df = pd.read_csv(path, parse_dates=['date'])
+    df.set_index('date', inplace=True)
     charge_count_array = df.charge_channel.resample('MIN').apply(charge_count).values
     # DBの読み込む最後のid
     end_id = len(charge_count_array) + start_id    
@@ -181,6 +183,7 @@ def UpdateChargeCountByDate(path : str, start_id : int) -> int:
     return end_id
 
 
+# 任意の衛星のcharge_countを更新
 def UpdateChargeCount(sat_index : int, start_year :int, end_year : int) -> None:
     end_id = 0 # 初期値
 

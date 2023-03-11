@@ -118,7 +118,7 @@ class SAT_Charge():
                 continue
 
             # イオンの全チャンネルの値が大きい時
-            if check_ion.mean() > 1e10:
+            if check_ion.mean() > 1e9:
                 continue
             
             # 異常値検出
