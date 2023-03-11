@@ -1,12 +1,13 @@
+import os
+from datetime import datetime
+
 import cdflib
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import scipy.stats as stats
 import seaborn as sns
 from matplotlib.colors import LogNorm
-from datetime import datetime
-import scipy.stats as stats
-import os
 
 
 class SAT_Charge():
@@ -114,6 +115,10 @@ class SAT_Charge():
         for i in check_id_list:
             check_ion = self.ion[i][self.ion[i] > 0]
             if len(check_ion) <= 2:
+                continue
+
+            # イオンの全チャンネルの値が大きい時
+            if check_ion.mean() > 1e10:
                 continue
             
             # 異常値検出
