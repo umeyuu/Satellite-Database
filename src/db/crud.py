@@ -1,11 +1,11 @@
-from setting import ENGINE, session
-import pandas as pd
-import numpy as np
 from datetime import datetime
-from models import Charge_Sat
-from sqlalchemy import func, or_
 from typing import Tuple
 
+import numpy as np
+import pandas as pd
+from models import Charge_Sat
+from setting import ENGINE, session
+from sqlalchemy import func, or_
 
 
 def charge_count(channel_array):
@@ -157,7 +157,52 @@ def GetChargeDataAll():
                'six_minute_after', 'seven_minute_after', 'eight_minute_after', 'nine_minute_after', 'ten_minute_after']
     df = pd.DataFrame(output, columns=columns)
     df.to_csv('charge.csv', index=False)
+
     
+def UpdateChargeCountByDate(path : str, start_id : int) -> int:
+    # csvを読み込み
+    df = pd.read_csv(path, parse_dates=['date'])
+    charge_count_array = df.charge_channel.resample('MIN').apply(charge_count).values
+    # DBの読み込む最後のid
+    end_id = len(charge_count_array) + start_id    
+    
+    # クエリー
+    responses = session.query(
+        Charge_Sat
+    ).filter(
+        Charge_Sat.id.between(start_id, end_id)
+    ).all()
+
+    # 更新
+    for response, value in zip(responses, charge_count_array):
+        response.charge_count = value
+    session.commit()
+
+    return end_id
+
+
+def UpdateChargeCount(sat_index : int, start_year :int, end_year : int) -> None:
+    end_id = 0 # 初期値
+
+    for year in range(start_year, end_year+1):
+        for month in range(1, 13):
+            for day in range(1, 32):
+
+                month_str = str(month).zfill(2)
+                day_str = str(day).zfill(2)
+                path = f'/Volumes/USB/Processed_Data/dmsp-f{sat_index}/{year}/{month_str}/dmsp-f{sat_index}_{year}{month_str}{day_str}.csv'
+                start_id = get_date_id(satellite_id=sat_index, YMD=datetime(year=year, month=month, day=day))
+
+                # charge_countを更新
+                try :
+                    if end_id != 0 and start_id != end_id+1:
+                        raise 'start_idが間違っている'
+                    end_id = UpdateChargeCountByDate(path=path, start_id=start_id)
+                except:
+                    print(year, month, day)
+                    continue
+
+
 
 
 if __name__ == '__main__':
