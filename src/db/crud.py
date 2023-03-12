@@ -74,7 +74,7 @@ def get_date_id(satellite_id, YMD : datetime) -> int:
 
 
 # 1分後に帯電しているレコードを取得
-def get_charge_next(satellite_id : int, start_id: int, end_id : int) -> Tuple[list, int]:
+def get_charge_next(start_id: int, end_id : int) -> Tuple[list, int]:
     # サブクエリー
     subquery = (session.query(
         Charge_Sat.satellite_id,
@@ -204,13 +204,14 @@ def UpdateChargeCount(sat_index : int, start_year :int, end_year : int) -> None:
                 month_str = str(month).zfill(2)
                 day_str = str(day).zfill(2)
                 path = f'/Volumes/USB/Processed_Data/dmsp-f{sat_index}/{year}/{month_str}/dmsp-f{sat_index}_{year}{month_str}{day_str}.csv'
-                start_id = get_date_id(satellite_id=sat_index, YMD=datetime(year=year, month=month, day=day))
-
+                
                 # charge_countを更新
                 try :
+                    start_id = get_date_id(satellite_id=sat_index, YMD=datetime(year=year, month=month, day=day))
                     if end_id != 0 and start_id != end_id+1:
                         raise 'start_idが間違っている'
                     end_id = UpdateChargeCountByDate(path=path, start_id=start_id)
+                    print(f'{year}/{month_str}/{day_str}のupdate成功')
                 except:
                     print(year, month, day)
                     continue
@@ -219,11 +220,12 @@ def UpdateChargeCount(sat_index : int, start_year :int, end_year : int) -> None:
 
 
 if __name__ == '__main__':
-    sat_index = 17
-    start_year = 2007
+    sat_index = 16
+    start_year = 2004
     end_year = 2022
-    InsertAll(sat_index=sat_index, start_year=start_year, end_year=end_year)
+    # InsertAll(sat_index=sat_index, start_year=start_year, end_year=end_year)
     # ReadChargeDate()
     # tmp, ind = get_charge_next(satellite_id=16, start_id=4184097, end_id=4184097+100000)
     # res = GetChargeDataAll(satellite_id=16)
     # breakpoint()
+    UpdateChargeCount(sat_index=sat_index, start_year=start_year, end_year=end_year)
