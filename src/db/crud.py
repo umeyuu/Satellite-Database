@@ -64,10 +64,12 @@ def ReadChargeDate():
 
 # 時刻に対応するidを取得
 def get_date_id(satellite_id, YMD : datetime) -> int:
-    response = session.query(Charge_Sat.id).filter(
+    session_R = session() # read セッションを生成
+    response = session_R.query(Charge_Sat.id).filter(
         Charge_Sat.satellite_id == satellite_id,
         Charge_Sat.date == YMD
         ).first()
+    session_R.close() # セッションを閉じる
     return response[0]
 
 
@@ -166,19 +168,27 @@ def UpdateChargeCountByDate(path : str, start_id : int) -> int:
     df.set_index('date', inplace=True)
     charge_count_array = df.charge_channel.resample('MIN').apply(charge_count).values
     # DBの読み込む最後のid
-    end_id = len(charge_count_array) + start_id    
-    
-    # クエリー
-    responses = session.query(
-        Charge_Sat
-    ).filter(
-        Charge_Sat.id.between(start_id, end_id)
-    ).all()
+    end_id = len(charge_count_array) - 1 + start_id
 
+    session_U = session() # updateセッションを生成
+
+    # 更新する値を準備
+    update_value_lis = []
+    for i, c in enumerate(charge_count_array):
+        tmp_dict = {'id': start_id+i, 'charge_count':c}
+        update_value_lis.append(tmp_dict)
+    
     # 更新
-    for response, value in zip(responses, charge_count_array):
-        response.charge_count = value
-    session.commit()
+    try:
+        session_U.bulk_update_mappings(
+            Charge_Sat,
+            update_value_lis,
+        )
+        session_U.commit()
+    except:
+        session_U.rollback()
+    finally:
+        session_U.close()
 
     return end_id
 
